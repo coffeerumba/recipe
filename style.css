@@ -154,10 +154,10 @@ a { color: inherit; }
   display: flex;
   flex-direction: column;
   user-select: none;
-  touch-action: none;
+  touch-action: pan-y;
   will-change: transform;
 }
-.card * { touch-action: none; }
+.card * { touch-action: pan-y; }
 .card.is-top { cursor: grab; }
 .card.is-top.dragging { cursor: grabbing; }
 .card.stack-1 { transform: translateY(10px) scale(0.96); }
