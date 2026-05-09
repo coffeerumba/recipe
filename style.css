@@ -138,14 +138,14 @@ a { color: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 460px;
+  min-height: 480px;
 }
 
 .card {
   position: absolute;
   width: 100%;
   max-width: 360px;
-  height: 460px;
+  height: 540px;
   background: #fff;
   border-radius: 18px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
@@ -160,8 +160,8 @@ a { color: inherit; }
 .card details, .card summary { touch-action: auto; }
 .card.is-top { cursor: grab; }
 .card.is-top.dragging { cursor: grabbing; }
-.card.stack-1 { transform: translateY(10px); }
-.card.stack-2 { transform: translateY(20px); }
+.card.stack-1 { transform: translateY(10px) scale(0.96); }
+.card.stack-2 { transform: translateY(20px) scale(0.92); }
 
 .card-image-wrap {
   width: 100%;
