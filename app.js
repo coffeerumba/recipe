@@ -17,6 +17,17 @@ const CATEGORY_OPTIONS = [
   { id: 'fish', label: '🐟 魚' },
   { id: 'other', label: '🍳 その他' }
 ];
+const CATEGORY_ORDER = ['野菜・果物', '肉', '魚介', '卵・乳・豆腐', '主食・乾物・缶詰', '調味料', '不明'];
+const NAME_TO_CATEGORY = (() => {
+  const m = {};
+  if (window.CATEGORIES) {
+    for (const [cat, names] of Object.entries(window.CATEGORIES)) {
+      for (const name of names) m[name] = cat;
+    }
+  }
+  return m;
+})();
+
 const DEFAULT_FILTERS = {
   categories: CATEGORY_OPTIONS.map(c => c.id),
   times: [...TIME_OPTIONS],
@@ -392,34 +403,56 @@ function renderMaterials(main) {
       map.set(name, ex);
     }
   }
-  const sorted = [...map.entries()].sort(
-    (a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0], 'ja')
-  );
 
-  const items = sorted.map(([name, info]) => {
-    const checked = state.materialsChecked.has(name);
-    return `<li class="${checked ? 'checked' : ''}" data-name="${escapeHtml(name)}">
-      <label>
-        <input type="checkbox" ${checked ? 'checked' : ''}>
-        <span class="m-name">${escapeHtml(name)}</span>
-        ${info.count > 1 ? `<span class="m-count">×${info.count}</span>` : ''}
-      </label>
-    </li>`;
+  const grouped = {};
+  for (const cat of CATEGORY_ORDER) grouped[cat] = [];
+  for (const [name, info] of map.entries()) {
+    const cat = NAME_TO_CATEGORY[name] || '不明';
+    grouped[cat].push([name, info]);
+  }
+  for (const cat of CATEGORY_ORDER) {
+    grouped[cat].sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0], 'ja'));
+  }
+
+  const totalKinds = map.size;
+  const sections = CATEGORY_ORDER.filter(c => grouped[c].length > 0).map(cat => {
+    const items = grouped[cat].map(([name, info]) => {
+      const checked = state.materialsChecked.has(name);
+      return `<li class="${checked ? 'checked' : ''}" data-name="${escapeHtml(name)}">
+        <label>
+          <input type="checkbox" ${checked ? 'checked' : ''}>
+          <span class="m-name">${escapeHtml(name)}</span>
+          ${info.count > 1 ? `<span class="m-count">×${info.count}</span>` : ''}
+        </label>
+      </li>`;
+    }).join('');
+    return `
+      <section class="materials-cat">
+        <h3>${escapeHtml(cat)} <span class="m-cat-count">${grouped[cat].length}</span></h3>
+        <ul class="materials-list">${items}</ul>
+      </section>`;
   }).join('');
 
   main.innerHTML = `
     <div class="materials-view">
       <div class="materials-summary">
-        <div><strong>${liked.length}</strong> レシピ ／ <strong>${sorted.length}</strong> 種類の材料</div>
+        <div><strong>${liked.length}</strong> レシピ ／ <strong>${totalKinds}</strong> 種類の材料</div>
         <button class="copy-btn" id="copy-btn">📋 コピー</button>
       </div>
-      <ul class="materials-list">${items}</ul>
+      ${sections}
     </div>`;
 
   document.getElementById('copy-btn').onclick = async () => {
-    const text = sorted.map(([name, info]) =>
-      info.count > 1 ? `${name} ×${info.count}` : name
-    ).join('\n');
+    const lines = [];
+    for (const cat of CATEGORY_ORDER) {
+      if (grouped[cat].length === 0) continue;
+      lines.push(`【${cat}】`);
+      for (const [name, info] of grouped[cat]) {
+        lines.push(info.count > 1 ? `${name} ×${info.count}` : name);
+      }
+      lines.push('');
+    }
+    const text = lines.join('\n').trim();
     try {
       await navigator.clipboard.writeText(text);
       alert('材料リストをコピーしました');
