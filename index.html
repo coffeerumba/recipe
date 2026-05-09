@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#ff4458">
+  <title>レシピスワイプ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="header-left"></div>
+      <h1>レシピスワイプ</h1>
+      <div class="header-right">
+        <button class="header-icon-btn" id="open-filter" title="フィルタ" aria-label="フィルタを開く">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"/>
+            <line x1="4" y1="12" x2="20" y2="12"/>
+            <line x1="4" y1="18" x2="20" y2="18"/>
+            <circle cx="9" cy="6" r="2.5" fill="#fff"/>
+            <circle cx="15" cy="12" r="2.5" fill="#fff"/>
+            <circle cx="7" cy="18" r="2.5" fill="#fff"/>
+          </svg>
+        </button>
+        <button class="header-icon-btn" id="reset-history" title="履歴をリセット" aria-label="履歴をリセット">↺</button>
+      </div>
+    </header>
+
+    <main class="app-main" id="main"></main>
+
+    <nav class="app-nav">
+      <button data-tab="swipe" class="active"><span class="nav-icon">🔍</span><span>スワイプ</span></button>
+      <button data-tab="liked"><span class="nav-icon">❤️</span><span id="liked-label">お気に入り</span></button>
+      <button data-tab="materials"><span class="nav-icon">🛒</span><span>材料</span></button>
+    </nav>
+  </div>
+
+  <div class="sheet-overlay hidden" id="sheet-overlay">
+    <div class="sheet">
+      <div class="sheet-handle-wrap"><div class="sheet-handle"></div></div>
+      <div class="sheet-header">
+        <h2>フィルタ</h2>
+        <button class="sheet-close" id="sheet-close" aria-label="閉じる">×</button>
+      </div>
+      <div class="sheet-body" id="sheet-body"></div>
+      <div class="sheet-footer">
+        <button class="reset-btn" id="filter-reset">リセット</button>
+        <button class="apply-btn" id="filter-apply">適用</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="recipes-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
