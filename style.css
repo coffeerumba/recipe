@@ -247,7 +247,7 @@ a { color: inherit; }
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  border: none;
+  background: #fff;
   font-size: 1.7rem;
   display: flex;
   align-items: center;
@@ -255,8 +255,8 @@ a { color: inherit; }
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: transform 0.1s ease;
 }
-.action-btn.nope { background: #fff; color: #ff3b30; border: 1.5px solid #ff3b30; }
-.action-btn.like { background: #ff4458; color: white; }
+.action-btn.nope { color: #ff3b30; border: 2px solid #ff3b30; }
+.action-btn.like { color: #2ecc71; border: 2px solid #2ecc71; }
 .action-btn:active { transform: scale(0.92); }
 
 .swipe-empty {
