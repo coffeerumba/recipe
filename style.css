@@ -156,6 +156,7 @@ a { color: inherit; }
   touch-action: none;
   will-change: transform;
 }
+.card * { touch-action: none; }
 .card details, .card summary { touch-action: auto; }
 .card.is-top { cursor: grab; }
 .card.is-top.dragging { cursor: grabbing; }
