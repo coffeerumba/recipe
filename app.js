@@ -273,10 +273,10 @@ function setupSwipeInteract() {
         const nope = card.querySelector('.overlay-nope');
         if (!like || !nope) return;
         if (dx > 0) {
-          like.style.opacity = Math.max(0, Math.min(1, (dx - 40) / 100));
+          like.style.opacity = Math.max(0, Math.min(1, (dx - 20) / 60));
           nope.style.opacity = 0;
         } else {
-          nope.style.opacity = Math.max(0, Math.min(1, (-dx - 40) / 100));
+          nope.style.opacity = Math.max(0, Math.min(1, (-dx - 20) / 60));
           like.style.opacity = 0;
         }
       },
