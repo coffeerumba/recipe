@@ -244,71 +244,63 @@ function renderSwipe(main) {
       </div>
     </div>`;
 
-  const topCard = main.querySelector('.card.is-top');
-  if (topCard) attachDrag(topCard);
-
   document.getElementById('btn-nope').onclick = () => triggerSwipe('left');
   document.getElementById('btn-like').onclick = () => triggerSwipe('right');
 }
 
-// ---------- Drag / swipe gesture ----------
-function attachDrag(card) {
-  let startX = 0;
-  let dx = 0;
-  let dragging = false;
-  let pointerId = null;
-  const likeOverlay = card.querySelector('.overlay-like');
-  const nopeOverlay = card.querySelector('.overlay-nope');
+// ---------- Drag / swipe gesture (interact.js) ----------
+const SWIPE_DISTANCE = 110;
+const SWIPE_VELOCITY = 600; // px/s
 
-  function onDown(e) {
-    if (e.target.closest('details, summary')) return; // let details toggle
-    dragging = true;
-    pointerId = e.pointerId;
-    startX = e.clientX;
-    dx = 0;
-    card.classList.add('dragging');
-    card.style.transition = 'none';
-    try { card.setPointerCapture(pointerId); } catch (_) { /* ignore */ }
-  }
+function setupSwipeInteract() {
+  interact('.card.is-top').draggable({
+    inertia: false,
+    ignoreFrom: 'details, summary',
+    listeners: {
+      start(event) {
+        const card = event.target;
+        card.dataset.dx = '0';
+        card.classList.add('dragging');
+        card.style.transition = 'none';
+      },
+      move(event) {
+        const card = event.target;
+        const dx = (parseFloat(card.dataset.dx) || 0) + event.dx;
+        card.dataset.dx = String(dx);
+        card.style.transform = `translateX(${dx}px) rotate(${dx / 18}deg)`;
+        const like = card.querySelector('.overlay-like');
+        const nope = card.querySelector('.overlay-nope');
+        if (!like || !nope) return;
+        if (dx > 0) {
+          like.style.opacity = Math.max(0, Math.min(1, (dx - 40) / 100));
+          nope.style.opacity = 0;
+        } else {
+          nope.style.opacity = Math.max(0, Math.min(1, (-dx - 40) / 100));
+          like.style.opacity = 0;
+        }
+      },
+      end(event) {
+        const card = event.target;
+        card.classList.remove('dragging');
+        const dx = parseFloat(card.dataset.dx) || 0;
+        const vx = event.velocityX || 0;
 
-  function onMove(e) {
-    if (!dragging || e.pointerId !== pointerId) return;
-    dx = e.clientX - startX;
-    const rotate = dx / 18;
-    card.style.transform = `translateX(${dx}px) rotate(${rotate}deg)`;
-    if (dx > 0) {
-      likeOverlay.style.opacity = Math.max(0, Math.min(1, (dx - 40) / 100));
-      nopeOverlay.style.opacity = 0;
-    } else {
-      nopeOverlay.style.opacity = Math.max(0, Math.min(1, (-dx - 40) / 100));
-      likeOverlay.style.opacity = 0;
+        if (dx > SWIPE_DISTANCE || vx > SWIPE_VELOCITY) {
+          flyOff(card, 'right');
+        } else if (dx < -SWIPE_DISTANCE || vx < -SWIPE_VELOCITY) {
+          flyOff(card, 'left');
+        } else {
+          card.style.transition = 'transform 0.2s ease';
+          card.style.transform = '';
+          card.dataset.dx = '0';
+          const like = card.querySelector('.overlay-like');
+          const nope = card.querySelector('.overlay-nope');
+          if (like) like.style.opacity = 0;
+          if (nope) nope.style.opacity = 0;
+        }
+      }
     }
-  }
-
-  function onUp(e) {
-    if (!dragging || (pointerId !== null && e.pointerId !== pointerId)) return;
-    dragging = false;
-    card.classList.remove('dragging');
-    try { card.releasePointerCapture(pointerId); } catch (_) { /* ignore */ }
-
-    const threshold = 110;
-    if (dx > threshold) {
-      flyOff(card, 'right');
-    } else if (dx < -threshold) {
-      flyOff(card, 'left');
-    } else {
-      // snap back
-      card.style.transition = 'transform 0.2s ease';
-      card.style.transform = '';
-      likeOverlay.style.opacity = 0;
-      nopeOverlay.style.opacity = 0;
-    }
-  }
-
-  card.addEventListener('pointerdown', onDown);
-  card.addEventListener('pointermove', onMove);
-  card.addEventListener('pointerup', onUp);
-  card.addEventListener('pointercancel', onUp);
+  });
 }
 
 function triggerSwipe(direction) {
@@ -550,6 +542,7 @@ function resetHistory() {
 function init() {
   loadState();
   rebuildQueue();
+  setupSwipeInteract();
   render();
 
   document.querySelectorAll('.app-nav button').forEach(btn => {
