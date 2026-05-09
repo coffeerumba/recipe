@@ -255,7 +255,6 @@ const SWIPE_VELOCITY = 600; // px/s
 function setupSwipeInteract() {
   interact('.card.is-top').draggable({
     inertia: false,
-    ignoreFrom: 'details, summary',
     listeners: {
       start(event) {
         const card = event.target;
