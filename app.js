@@ -3,13 +3,14 @@ const STORAGE_KEY = 'recipe-swipe-html-v1';
 
 const CATEGORY_LABELS = { meat: '🥩 肉', fish: '🐟 魚', other: '🍳 その他' };
 const TIME_OPTIONS = ['5分以内', '約10分', '約15分', '約30分', '約1時間', '1時間以上', '指定なし'];
+const TIME_LABEL = t => t === '指定なし' ? '不明' : t;
 const COST_OPTIONS = [
   { id: 'under100', label: '〜100円' },
   { id: 'under300', label: '〜300円' },
   { id: 'under500', label: '〜500円' },
   { id: 'under1000', label: '〜1000円' },
   { id: 'over1000', label: '1000円〜' },
-  { id: 'unknown', label: '指定なし' }
+  { id: 'unknown', label: '不明' }
 ];
 const CATEGORY_OPTIONS = [
   { id: 'meat', label: '🥩 肉' },
@@ -468,7 +469,7 @@ function renderFilterBody() {
     chip(draftFilters.categories.includes(o.id), 'categories', o.id, o.label)
   ).join('');
   const timeChips = TIME_OPTIONS.map(t =>
-    chip(draftFilters.times.includes(t), 'times', t, t)
+    chip(draftFilters.times.includes(t), 'times', t, TIME_LABEL(t))
   ).join('');
   const costChips = COST_OPTIONS.map(o =>
     chip(draftFilters.costBuckets.includes(o.id), 'costBuckets', o.id, o.label)
