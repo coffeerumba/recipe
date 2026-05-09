@@ -28,6 +28,37 @@ const NAME_TO_CATEGORY = (() => {
   return m;
 })();
 
+// 「共通材料数」のスコアリングで使う優先カテゴリ（調味料・不明は除外）
+const PRIORITY_CATEGORIES = new Set(['野菜・果物', '肉', '魚介', '卵・乳・豆腐', '主食・乾物・缶詰']);
+const _importantCache = new Map();
+function importantMaterials(recipe) {
+  let s = _importantCache.get(recipe.id);
+  if (s) return s;
+  s = new Set();
+  for (const raw of recipe.materials || []) {
+    const name = normalizeMaterial(raw);
+    if (!name) continue;
+    const cat = NAME_TO_CATEGORY[name];
+    if (cat && PRIORITY_CATEGORIES.has(cat)) s.add(name);
+  }
+  _importantCache.set(recipe.id, s);
+  return s;
+}
+function likedMaterialSet() {
+  const set = new Set();
+  for (const id of state.likedIds) {
+    const r = recipeById(id);
+    if (!r) continue;
+    for (const m of importantMaterials(r)) set.add(m);
+  }
+  return set;
+}
+function scoreRecipe(recipe, likedSet) {
+  let n = 0;
+  for (const m of importantMaterials(recipe)) if (likedSet.has(m)) n++;
+  return n;
+}
+
 const DEFAULT_FILTERS = {
   categories: CATEGORY_OPTIONS.map(c => c.id),
   times: [...TIME_OPTIONS],
@@ -43,7 +74,8 @@ const state = {
   filters: cloneDefaults(),
   queue: [],
   cursor: 0,
-  materialsChecked: new Set()
+  materialsChecked: new Set(),
+  prioritizeByLiked: true
 };
 let draftFilters = null;
 
@@ -124,6 +156,9 @@ function loadState() {
     if (saved.filters) {
       state.filters = { ...cloneDefaults(), ...saved.filters };
     }
+    if (typeof saved.prioritizeByLiked === 'boolean') {
+      state.prioritizeByLiked = saved.prioritizeByLiked;
+    }
   } catch (e) {
     console.warn('failed to load state', e);
   }
@@ -133,25 +168,53 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     likedIds: state.likedIds,
     rejectedIds: state.rejectedIds,
-    filters: state.filters
+    filters: state.filters,
+    prioritizeByLiked: state.prioritizeByLiked
   }));
 }
 
 // ---------- Queue ----------
+function sortByMatch(arr) {
+  const likedSet = likedMaterialSet();
+  if (likedSet.size === 0) return arr;
+  return arr
+    .map((r, i) => ({ r, score: scoreRecipe(r, likedSet), i }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map(x => x.r);
+}
+
 function rebuildQueue() {
   const seen = new Set([...state.likedIds, ...state.rejectedIds]);
   const candidates = window.RECIPES.filter(
     r => !seen.has(r.id) && matchesFilter(r, state.filters)
   );
-  state.queue = shuffle(candidates);
+  const shuffled = shuffle(candidates);
+  state.queue = state.prioritizeByLiked ? sortByMatch(shuffled) : shuffled;
   state.cursor = 0;
 }
 
-// ---------- Header / Nav updates ----------
-function updateHeader() {
-  document.getElementById('open-filter').classList.toggle('has-dot', isFilterActive(state.filters));
+// 残キューだけを今のお気に入り材料で並び替える（cursor 以降のみ更新）
+function reprioritizeRemaining() {
+  if (!state.prioritizeByLiked) return;
+  if (state.cursor >= state.queue.length) return;
+  const head = state.queue.slice(0, state.cursor);
+  const tail = sortByMatch(state.queue.slice(state.cursor));
+  state.queue = [...head, ...tail];
 }
 
+function toggleSortMode() {
+  state.prioritizeByLiked = !state.prioritizeByLiked;
+  if (state.cursor < state.queue.length) {
+    const head = state.queue.slice(0, state.cursor);
+    const tailRaw = state.queue.slice(state.cursor);
+    const tail = state.prioritizeByLiked ? sortByMatch(tailRaw) : shuffle(tailRaw);
+    state.queue = [...head, ...tail];
+  }
+  saveState();
+  render();
+}
+
+// ---------- Header / Nav updates ----------
 function updateNav() {
   document.querySelectorAll('.app-nav button').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === state.tab);
@@ -163,7 +226,6 @@ function updateNav() {
 
 // ---------- Render ----------
 function render() {
-  updateHeader();
   updateNav();
   const main = document.getElementById('main');
   main.innerHTML = '';
@@ -243,11 +305,25 @@ function renderSwipe(main) {
       return cardHTML(r, stackPos, stackPos === 0);
     }).join('');
 
+  const sortLabel = state.prioritizeByLiked ? '材料マッチ順' : 'ランダム順';
+  const sortClass = state.prioritizeByLiked ? '' : ' is-random';
+  const filterLabel = filterActive ? 'フィルタ中' : 'フィルタ';
+  const filterClass = filterActive ? '' : ' is-inactive';
+  const filterIcon = `<svg class="filter-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <line x1="4" y1="6" x2="20" y2="6"/>
+    <line x1="4" y1="12" x2="20" y2="12"/>
+    <line x1="4" y1="18" x2="20" y2="18"/>
+    <circle cx="9" cy="6" r="2.5" fill="currentColor"/>
+    <circle cx="15" cy="12" r="2.5" fill="currentColor"/>
+    <circle cx="7" cy="18" r="2.5" fill="currentColor"/>
+  </svg>`;
+
   main.innerHTML = `
     <div class="swipe-container">
       <div class="swipe-meta">
         残り <strong>${remaining}</strong> 件
-        ${filterActive ? '<span class="filter-tag">フィルタ中</span>' : ''}
+        <button type="button" class="filter-tag${filterClass}" id="filter-toggle">${filterIcon}${filterLabel}</button>
+        <button type="button" class="sort-toggle${sortClass}" id="sort-toggle">${sortLabel}</button>
       </div>
       <div class="card-stack" id="card-stack">${cardsHTML}</div>
       <div class="actions">
@@ -258,6 +334,8 @@ function renderSwipe(main) {
 
   document.getElementById('btn-nope').onclick = () => triggerSwipe('left');
   document.getElementById('btn-like').onclick = () => triggerSwipe('right');
+  document.getElementById('sort-toggle').onclick = toggleSortMode;
+  document.getElementById('filter-toggle').onclick = openFilter;
 }
 
 // ---------- Drag / swipe gesture (interact.js) ----------
@@ -338,6 +416,7 @@ function flyOff(card, direction) {
   setTimeout(() => {
     if (direction === 'right') {
       if (!state.likedIds.includes(id)) state.likedIds.push(id);
+      reprioritizeRemaining();
     } else {
       if (!state.rejectedIds.includes(id)) state.rejectedIds.push(id);
     }
@@ -378,6 +457,7 @@ function renderLiked(main) {
     btn.onclick = () => {
       const id = parseInt(btn.dataset.id, 10);
       state.likedIds = state.likedIds.filter(x => x !== id);
+      reprioritizeRemaining();
       saveState();
       render();
     };
@@ -584,7 +664,6 @@ function init() {
     btn.onclick = () => { state.tab = btn.dataset.tab; render(); };
   });
 
-  document.getElementById('open-filter').onclick = openFilter;
   document.getElementById('sheet-close').onclick = closeFilter;
   document.getElementById('sheet-overlay').onclick = e => {
     if (e.target.id === 'sheet-overlay') closeFilter();
