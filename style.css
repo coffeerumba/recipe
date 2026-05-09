@@ -80,6 +80,7 @@ a { color: inherit; }
   flex: 1;
   min-height: 0;
   position: relative;
+  overflow-x: hidden;
   overflow-y: auto;
   background: #f7f7f9;
 }
